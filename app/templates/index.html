@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Your Job Applications</h2>
+    
+    <!-- Filter and Add Button -->
+    <form class="row g-3" method="GET">
+        <div class="col-md-4">
+            <input type="text" name="search" placeholder="Search Company or Job" class="form-control" value="{{ request.args.get('search', '') }}">
+        </div>
+        <div class="col-md-4">
+            <select name="status" class="form-select">
+                <option value="All">All Status</option>
+                {% for status in ['Applied', 'Interview', 'Offer', 'Rejected'] %}
+                    <option value="{{ status }}" {% if request.args.get('status') == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-primary" type="submit">Filter</button>
+            <a href="{{ url_for('main.add_application') }}" class="btn btn-success">+ Add New</a>
+        </div>
+    </form>
+
+    <!-- Export Buttons -->
+    <div class="mt-3">
+        <a href="{{ url_for('main.export_data', filetype='csv') }}" class="btn btn-outline-primary">Export CSV</a>
+        <a href="{{ url_for('main.export_data', filetype='excel') }}" class="btn btn-outline-success">Export Excel</a>
+        <a href="{{ url_for('main.send_reminders') }}" class="btn btn-outline-warning mt-2">Send Interview Reminders</a>
+    </div>
+
+    <!-- Applications Table -->
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Company</th><th>Job Title</th><th>Date</th><th>Status</th><th>Link</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+            <tr>
+                <td>{{ app.company_name }}</td>
+                <td>{{ app.job_title }}</td>
+                <td>{{ app.application_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ app.status }}</td>
+                <td>
+                    {% if app.application_link %}
+                        <a href="{{ app.application_link }}" target="_blank">Link</a>
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('main.edit_application', app_id=app.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{{ url_for('main.delete_application', app_id=app.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Chart.js Graph -->
+    <div class="mt-5">
+        <h4>Application Status Overview</h4>
+        <canvas id="statusChart" width="400" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+fetch('{{ url_for("main.graph_data") }}')
+  .then(response => response.json())
+  .then(data => {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Application Status',
+                data: Object.values(data),
+                backgroundColor: ['#007bff', '#ffc107', '#28a745', '#dc3545'],
+            }]
+        }
+    });
+  });
+</script>
+{% endblock %}
